@@ -79,11 +79,11 @@ module Hanami
       #   end
       #
       # rubocop:disable Metrics/AbcSize
-      def validations(&blk)
+      def validations(base_schema = nil, &blk)
         schema_predicates = _predicates_module || __predicates
 
         base   = _build(predicates: schema_predicates, &_base_rules)
-        schema = _build(predicates: schema_predicates, rules: base.rules, &blk)
+        schema = _build(base_schema: base_schema, predicates: schema_predicates, rules: base.rules, &blk)
         schema.configure(&_schema_config)
         schema.configure(&_schema_predicates)
         schema.extend(__messages) unless _predicates.empty?
@@ -247,7 +247,13 @@ module Hanami
       # @api private
       def _build(options = {}, &blk)
         options = { build: false }.merge(options)
-        Dry::Validation.__send__(_schema_type, options, &blk)
+        base_schema = options.delete(:base_schema)
+
+        if _schema_type == :Schema && base_schema
+          Dry::Validation.Schema(base_schema.schema, options, &blk)
+        else
+          Dry::Validation.__send__(_schema_type, options, &blk)
+        end
       end
 
       # @since 0.6.0
